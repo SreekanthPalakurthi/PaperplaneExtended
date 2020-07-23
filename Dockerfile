@@ -22,7 +22,7 @@ WORKDIR /usr/src/app/PaperplaneRemix/
 # Fork/Clone maintainers may change the clone URL to match
 # the location of their repository. [#ThatsHerokuForYa!]
 RUN if [ ! -d /usr/src/app/PaperplaneRemix/.git ] ; then \
-    git clone "https://github.com/AvinashReddy3108/PaperplaneRemix.git" /tmp/dirty/PaperplaneRemix/ && \
+    git clone "https://github.com/sreekfreak995/PaperplaneExtended.git" /tmp/dirty/PaperplaneRemix/ && \
     mv -v -u /tmp/dirty/PaperplaneRemix/.git /usr/src/app/PaperplaneRemix/ && \
     rm -rf /tmp/dirty/PaperplaneRemix/; \
     fi
