@@ -14,7 +14,6 @@ from telethon.errors import (
     ChatAdminRequiredError,
     ImageProcessFailedError,
     PhotoCropSizeSmallError,
-    UserAdminInvalidError,
 )
 from telethon.errors.rpcerrorlist import (
     BadRequestError,
@@ -78,42 +77,6 @@ MUTE_RIGHTS = ChatBannedRights(until_date=None, send_messages=True)
 
 UNMUTE_RIGHTS = ChatBannedRights(until_date=None, send_messages=False)
 # ================================================
-
-
-@register(outgoing=True, pattern=r"^\.setgpic$")
-async def set_group_photo(gpic):
-    """ For .setgpic command, changes the picture of a group """
-    if not gpic.is_group:
-        await gpic.edit("**I don't think this is a group.**")
-        return
-    replymsg = await gpic.get_reply_message()
-    chat = await gpic.get_chat()
-    admin = chat.admin_rights
-    creator = chat.creator
-    photo = None
-
-    if not (admin or creator):
-        return await gpic.edit(NO_ADMIN)
-
-    if replymsg and replymsg.media:
-        if isinstance(replymsg.media, MessageMediaPhoto):
-            photo = await gpic.client.download_media(message=replymsg.photo)
-        elif "image" in replymsg.media.document.mime_type.split("/"):
-            photo = await gpic.client.download_file(replymsg.media.document)
-        else:
-            await gpic.edit(INVALID_MEDIA)
-
-    if photo:
-        try:
-            await gpic.client(
-                EditPhotoRequest(gpic.chat_id, await gpic.client.upload_file(photo))
-            )
-            await gpic.edit(CHAT_PP_CHANGED)
-
-        except PhotoCropSizeSmallError:
-            await gpic.edit(PP_TOO_SMOL)
-        except ImageProcessFailedError:
-            await gpic.edit(PP_ERROR)
 
 
 @register(outgoing=True, pattern=r"^\.promote(?: |$)(.*)")
@@ -297,145 +260,6 @@ async def nothanos(unbon):
     except UserIdInvalidError:
         await unbon.edit("**Uh oh my unban logic broke!**")
 
-
-@register(outgoing=True, pattern=r"^\.mute(?: |$)(.*)")
-async def spider(spdr):
-    """
-    This function is basically muting peeps
-    """
-    # Check if the function running under SQL mode
-    try:
-        from userbot.modules.sql_helper.spam_mute_sql import mute
-    except AttributeError:
-        return await spdr.edit(NO_SQL)
-
-    # Admin or creator check
-    chat = await spdr.get_chat()
-    admin = chat.admin_rights
-    creator = chat.creator
-
-    # If not admin and not creator, return
-    if not (admin or creator):
-        return await spdr.edit(NO_ADMIN)
-
-    user, reason = await get_user_from_event(spdr)
-    if not user:
-        return
-
-    self_user = await spdr.client.get_me()
-
-    if user.id == self_user.id:
-        return await spdr.edit(
-            "**Hands too short, can't duct tape myself...**\n(ヘ･_･)ヘ┳━┳"
-        )
-
-    # If everything goes well, do announcing and mute
-    await spdr.edit("**Muting...**")
-    if mute(spdr.chat_id, user.id) is False:
-        return await spdr.edit("**Error! User is probably already muted.**")
-    try:
-        await spdr.client(EditBannedRequest(spdr.chat_id, user.id, MUTE_RIGHTS))
-
-    except UserIdInvalidError:
-        return await spdr.edit("**Uh oh my mute logic broke!**")
-    except UserAdminInvalidError:
-        pass
-
-    # Announce that the function is done
-    if reason:
-        await spdr.edit(f"**Muted successfully!**\nReason: {reason}")
-    else:
-        await spdr.edit("**Muted successfully!**")
-
-    # Announce to logging group
-    if BOTLOG:
-        await spdr.client.send_message(
-            BOTLOG_CHATID,
-            "#MUTE\n"
-            f"USER: [{user.first_name}](tg://user?id={user.id})\n"
-            f"CHAT: {spdr.chat.title}(`{spdr.chat_id}`)",
-        )
-
-
-@register(outgoing=True, pattern=r"^\.unmute(?: |$)(.*)")
-async def unmoot(unmot):
-    """ For .unmute command, unmute the replied/tagged person """
-    # Admin or creator check
-    chat = await unmot.get_chat()
-    admin = chat.admin_rights
-    creator = chat.creator
-
-    # If not admin and not creator, return
-    if not (admin or creator):
-        return await unmot.edit(NO_ADMIN)
-
-    # Check if the function running under SQL mode
-    try:
-        from userbot.modules.sql_helper.spam_mute_sql import unmute
-    except AttributeError:
-        return await unmot.edit(NO_SQL)
-
-    # If admin or creator, inform the user and start unmuting
-    await unmot.edit("**Unmuting...**")
-    user = await get_user_from_event(unmot)
-    user = user[0]
-    if not user:
-        return
-
-    if unmute(unmot.chat_id, user.id) is False:
-        return await unmot.edit("**Error! User is probably already unmuted.**")
-    try:
-        await unmot.client(EditBannedRequest(unmot.chat_id, user.id, UNBAN_RIGHTS))
-        await unmot.edit("**Unmuted successfully!**")
-    except UserIdInvalidError:
-        return await unmot.edit("**Uh oh my unmute logic broke!**")
-    except UserAdminInvalidError:
-        pass
-
-    if BOTLOG:
-        await unmot.client.send_message(
-            BOTLOG_CHATID,
-            "#UNMUTE\n"
-            f"USER: [{user.first_name}](tg://user?id={user.id})\n"
-            f"CHAT: {unmot.chat.title}(`{unmot.chat_id}`)",
-        )
-
-
-@register(incoming=True, disable_errors=True)
-async def muter(moot):
-    """ Used for deleting the messages of muted people """
-    try:
-        from userbot.modules.sql_helper.spam_mute_sql import is_muted
-    except AttributeError:
-        return
-    muted = is_muted(moot.chat_id)
-    rights = ChatBannedRights(
-        until_date=None,
-        send_messages=True,
-        send_media=True,
-        send_stickers=True,
-        send_gifs=True,
-        send_games=True,
-        send_inline=True,
-        embed_links=True,
-    )
-    if muted:
-        for i in muted:
-            if str(i.sender) == str(moot.sender_id):
-                try:
-                    await moot.delete()
-                    await moot.client(
-                        EditBannedRequest(moot.chat_id, moot.sender_id, rights)
-                    )
-                except (
-                    BadRequestError,
-                    UserAdminInvalidError,
-                    ChatAdminRequiredError,
-                    UserIdInvalidError,
-                ):
-                    await moot.client.send_read_acknowledge(moot.chat_id, moot.id)
-
-
 @register(outgoing=True, pattern=r"^\.zombies(?: |$)(.*)", groups_only=False)
 async def rm_deletedacc(show):
     """ For .zombies command, list all the ghost/deleted/zombie accounts in a chat. """
@@ -505,27 +329,6 @@ async def rm_deletedacc(show):
             f"\nCHAT: {show.chat.title}(`{show.chat_id}`)",
         )
 
-
-@register(outgoing=True, pattern=r"^\.admins$")
-async def get_admin(show):
-    """ For .admins command, list all of the admins of the chat. """
-    info = await show.client.get_entity(show.chat_id)
-    title = info.title or "this chat"
-    mentions = f"<b>Admins in {title}:</b> \n"
-    try:
-        async for user in show.client.iter_participants(
-            show.chat_id, filter=ChannelParticipantsAdmins
-        ):
-            if not user.deleted:
-                link = f'<a href="tg://user?id={user.id}">{user.first_name}</a>'
-                mentions += f"\n{link}"
-            else:
-                mentions += f"\nDeleted Account <code>{user.id}</code>"
-    except ChatAdminRequiredError as err:
-        mentions += " " + str(err) + "\n"
-    await show.edit(mentions, parse_mode="html")
-
-
 @register(outgoing=True, pattern=r"^\.pin(?: |$)(.*)")
 async def pin(msg):
     """ For .pin command, pins the replied/tagged message on the top the chat. """
@@ -556,17 +359,6 @@ async def pin(msg):
         return await msg.edit(NO_PERM)
 
     await msg.edit("**Pinned successfully!**")
-
-    user = await get_user_from_id(msg.sender_id, msg)
-
-    if BOTLOG:
-        await msg.client.send_message(
-            BOTLOG_CHATID,
-            "#PIN\n"
-            f"ADMIN: [{user.first_name}](tg://user?id={user.id})\n"
-            f"CHAT: {msg.chat.title}(`{msg.chat_id}`)\n"
-            f"LOUD: {not is_silent}",
-        )
 
 
 @register(outgoing=True, pattern=r"^\.kick(?: |$)(.*)")
@@ -600,235 +392,6 @@ async def kick(usr):
     else:
         await usr.edit(f"**Kicked** [{user.first_name}](tg://user?id={user.id})**!**")
 
-    if BOTLOG:
-        await usr.client.send_message(
-            BOTLOG_CHATID,
-            "#KICK\n"
-            f"USER: [{user.first_name}](tg://user?id={user.id})\n"
-            f"CHAT: {usr.chat.title}(`{usr.chat_id}`)\n",
-        )
-
-
-@register(outgoing=True, pattern=r"^\.users ?(.*)")
-async def get_users(show):
-    """ For .users command, list all of the users in a chat. """
-    info = await show.client.get_entity(show.chat_id)
-    title = info.title or "this chat"
-    mentions = f"Users in {title}: \n"
-    try:
-        if show.pattern_match.group(1):
-            searchq = show.pattern_match.group(1)
-            async for user in show.client.iter_participants(
-                show.chat_id, search=f"{searchq}"
-            ):
-                if not user.deleted:
-                    mentions += (
-                        f"\n[{user.first_name}](tg://user?id={user.id}) `{user.id}`"
-                    )
-                else:
-                    mentions += f"\nDeleted Account `{user.id}`"
-        else:
-            async for user in show.client.iter_participants(show.chat_id):
-                if user.deleted:
-                    mentions += f"\nDeleted Account `{user.id}`"
-                else:
-                    mentions += (
-                        f"\n[{user.first_name}](tg://user?id={user.id}) `{user.id}`"
-                    )
-    except ChatAdminRequiredError as err:
-        mentions += " " + str(err) + "\n"
-    try:
-        await show.edit(mentions)
-    except MessageTooLongError:
-        await show.edit(
-            "**Damn, this is a huge group. Uploading users list as file...**"
-        )
-        with open("userslist.txt", "w+") as file:
-            file.write(mentions)
-        await show.client.send_file(
-            show.chat_id,
-            "userslist.txt",
-            caption=f"Users in {title}",
-            reply_to=show.id,
-        )
-        remove("userslist.txt")
-
-
-async def get_user_from_event(event):
-    """ Get the user from argument or replied message. """
-    args = event.pattern_match.group(1).split(" ", 1)
-    extra = None
-    if event.reply_to_msg_id and len(args) != 2:
-        previous_message = await event.get_reply_message()
-        user_obj = await event.client.get_entity(previous_message.sender_id)
-        extra = event.pattern_match.group(1)
-    elif args:
-        user = args[0]
-        if len(args) == 2:
-            extra = args[1]
-
-        if user.isnumeric():
-            user = int(user)
-
-        if not user:
-            return await event.edit("**Pass the user's username, ID or reply!**")
-
-        if event.message.entities is not None:
-            probable_user_mention_entity = event.message.entities[0]
-
-            if isinstance(probable_user_mention_entity, MessageEntityMentionName):
-                user_id = probable_user_mention_entity.user_id
-                user_obj = await event.client.get_entity(user_id)
-                return user_obj
-        try:
-            user_obj = await event.client.get_entity(user)
-        except (TypeError, ValueError) as err:
-            return await event.edit(str(err))
-
-    return user_obj, extra
-
-
-async def get_user_from_id(user, event):
-    if isinstance(user, str):
-        user = int(user)
-
-    try:
-        user_obj = await event.client.get_entity(user)
-    except (TypeError, ValueError) as err:
-        return await event.edit(str(err))
-
-    return user_obj
-
-
-@register(outgoing=True, pattern=r"^\.usersdel ?(.*)")
-async def get_usersdel(show):
-    """ For .usersdel command, list all of the deleted users in a chat. """
-    info = await show.client.get_entity(show.chat_id)
-    title = info.title or "this chat"
-    mentions = f"deletedUsers in {title}: \n"
-    try:
-        if not show.pattern_match.group(1):
-            async for user in show.client.iter_participants(show.chat_id):
-                if not user.deleted:
-                    mentions += (
-                        f"\n[{user.first_name}](tg://user?id={user.id}) `{user.id}`"
-                    )
-        #       else:
-        #                mentions += f"\nDeleted Account `{user.id}`"
-        else:
-            searchq = show.pattern_match.group(1)
-            async for user in show.client.iter_participants(
-                show.chat_id, search=f"{searchq}"
-            ):
-                if not user.deleted:
-                    mentions += (
-                        f"\n[{user.first_name}](tg://user?id={user.id}) `{user.id}`"
-                    )
-        #       else:
-    #              mentions += f"\nDeleted Account `{user.id}`"
-    except ChatAdminRequiredError as err:
-        mentions += " " + str(err) + "\n"
-    try:
-        await show.edit(mentions)
-    except MessageTooLongError:
-        await show.edit(
-            "**Damn, this is a huge group. Uploading deletedusers list as file...**"
-        )
-        with open("deleteduserslist.txt", "w+") as file:
-            file.write(mentions)
-        await show.client.send_file(
-            show.chat_id,
-            "deleteduserslist.txt",
-            caption=f"Users in {title}",
-            reply_to=show.id,
-        )
-        remove("deleteduserslist.txt")
-
-
-async def get_userdel_from_event(event):
-    """ Get the deleted user from argument or replied message. """
-    args = event.pattern_match.group(1).split(" ", 1)
-    extra = None
-    if event.reply_to_msg_id and len(args) != 2:
-        previous_message = await event.get_reply_message()
-        user_obj = await event.client.get_entity(previous_message.sender_id)
-        extra = event.pattern_match.group(1)
-    elif args:
-        user = args[0]
-        if len(args) == 2:
-            extra = args[1]
-
-        if user.isnumeric():
-            user = int(user)
-
-        if not user:
-            return await event.edit(
-                "**Pass the deleted user's username, ID or reply!**"
-            )
-
-        if event.message.entities is not None:
-            probable_user_mention_entity = event.message.entities[0]
-
-            if isinstance(probable_user_mention_entity, MessageEntityMentionName):
-                user_id = probable_user_mention_entity.user_id
-                user_obj = await event.client.get_entity(user_id)
-                return user_obj
-        try:
-            user_obj = await event.client.get_entity(user)
-        except (TypeError, ValueError) as err:
-            return await event.edit(str(err))
-
-    return user_obj, extra
-
-
-async def get_userdel_from_id(user, event):
-    if isinstance(user, str):
-        user = int(user)
-
-    try:
-        user_obj = await event.client.get_entity(user)
-    except (TypeError, ValueError) as err:
-        return await event.edit(str(err))
-
-    return user_obj
-
-
-@register(outgoing=True, pattern=r"^\.bots$", groups_only=True)
-async def get_bots(show):
-    """ For .bots command, list all of the bots of the chat. """
-    info = await show.client.get_entity(show.chat_id)
-    title = info.title or "this chat"
-    mentions = f"<b>Bots in {title}:</b>\n"
-    try:
-        if isinstance(show.to_id, PeerChat):
-            return await show.edit("**I heard that only supergroups can have bots.**")
-        else:
-            async for user in show.client.iter_participants(
-                show.chat_id, filter=ChannelParticipantsBots
-            ):
-                if not user.deleted:
-                    link = f'<a href="tg://user?id={user.id}">{user.first_name}</a>'
-                    userid = f"<code>{user.id}</code>"
-                    mentions += f"\n{link} {userid}"
-                else:
-                    mentions += f"\nDeleted Bot <code>{user.id}</code>"
-    except ChatAdminRequiredError as err:
-        mentions += " " + str(err) + "\n"
-    try:
-        await show.edit(mentions, parse_mode="html")
-    except MessageTooLongError:
-        await show.edit("**Damn, too many bots here. Uploading bots list as file...**")
-        with open("botlist.txt", "w+") as file:
-            file.write(mentions)
-        await show.client.send_file(
-            show.chat_id,
-            "botlist.txt",
-            caption=f"Bots in {title}",
-            reply_to=show.id,
-        )
-        remove("botlist.txt")
-
-
 CMD_HELP.update(
     {
         "admin": ">`.promote <username/reply> <custom rank (optional)>`"
@@ -839,20 +402,8 @@ CMD_HELP.update(
         "\nUsage: Bans the person off your chat."
         "\n\n>`.unban <username/reply>`"
         "\nUsage: Removes the ban from the person in the chat."
-        "\n\n>`.mute <username/reply> <reason (optional)>`"
-        "\nUsage: Mutes the person in the chat, works on admins too."
-        "\n\n>`.unmute <username/reply>`"
-        "\nUsage: Removes the person from the muted list."
         "\n\n>`.zombies`"
         "\nUsage: Searches for deleted accounts in a group. "
         "Use .zombies clean to remove deleted accounts from the group."
-        "\n\n>`.admins`"
-        "\nUsage: Retrieves a list of admins in the chat."
-        "\n\n>`.bots`"
-        "\nUsage: Retrieves a list of bots in the chat."
-        "\n\n>`.users` or >`.users <name of member>`"
-        "\nUsage: Retrieves all (or queried) users in the chat."
-        "\n\n>`.setgppic <reply to image>`"
-        "\nUsage: Changes the group's display picture."
     }
 )

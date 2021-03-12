@@ -43,7 +43,7 @@ async def fastpurger(purg):
             BOTLOG_CHATID,
             "Purge of " + str(count) + " messages done successfully.")
     """
-    await sleep(2)
+    await sleep(1)
     await done.delete()
 
 
@@ -97,53 +97,11 @@ async def delete_it(delme):
             """
 
 
-@register(outgoing=True, pattern=r"^\.edit")
-async def editer(edit):
-    """ For .editme command, edit your last message. """
-    message = edit.text
-    chat = await edit.get_input_chat()
-    self_id = await edit.client.get_peer_id("me")
-    string = str(message[6:])
-    i = 1
-    async for message in edit.client.iter_messages(chat, self_id):
-        if i == 2:
-            await message.edit(string)
-            await edit.delete()
-            break
-        i += 1
-    """
-    if BOTLOG:
-        await edit.client.send_message(BOTLOG_CHATID,
-                                       "Edit query was executed successfully")
-   """
-
-
-@register(outgoing=True, pattern=r"^\.sd")
-async def selfdestruct(destroy):
-    """ For .sd command, make seflf-destructable messages. """
-    message = destroy.text
-    counter = int(message[4:6])
-    text = str(destroy.text[6:])
-    await destroy.edit(text)
-    await sleep(counter)
-    await destroy.delete()
-    """
-    if BOTLOG:
-        await destroy.client.send_message(BOTLOG_CHATID,
-                                          "sd query done successfully")
-    """
-
-
 CMD_HELP.update(
     {
         "purge": ">`.purge`" "\nUsage: Purges all messages starting from the reply.",
         "purgeme": ">`.purgeme <x>`"
         "\nUsage: Deletes x amount of your latest messages.",
         "del": ">`.del`" "\nUsage: Deletes the message you replied to.",
-        "edit": ">`.edit <newmessage>`"
-        "\nUsage: Replace your last message with <newmessage>.",
-        "sd": ">`.sd <x> <message>`"
-        "\nUsage: Creates a message that selfdestructs in x seconds."
-        "\n<x> should be a two digit value, 3rd digit and further digits will be taken as <message>.",
     }
 )
