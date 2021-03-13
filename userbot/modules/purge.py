@@ -37,12 +37,6 @@ async def fastpurger(purg):
     done = await purg.client.send_message(
         purg.chat_id, "**Fast purge complete!**" f"\nPurged {str(count)} messages"
     )
-    """
-    if BOTLOG:
-        await purg.client.send_message(
-            BOTLOG_CHATID,
-            "Purge of " + str(count) + " messages done successfully.")
-    """
     await sleep(1)
     await done.delete()
 
@@ -64,12 +58,6 @@ async def purgeme(delme):
         delme.chat_id,
         "**Purge complete!** Purged " + str(count) + " messages.",
     )
-    """
-    if BOTLOG:
-        await delme.client.send_message(
-            BOTLOG_CHATID,
-            "Purge of " + str(count) + " messages done successfully.")
-    """
     await sleep(2)
     i = 1
     await smsg.delete()
@@ -83,18 +71,8 @@ async def delete_it(delme):
         try:
             await msg_src.delete()
             await delme.delete()
-            """
-            if BOTLOG:
-                await delme.client.send_message(
-                    BOTLOG_CHATID, "Deletion of message was successful")
-            """
         except rpcbaseerrors.BadRequestError:
             await delme.edit("**Well, I can't delete a message.**")
-            """
-            if BOTLOG:
-                await delme.client.send_message(
-                    BOTLOG_CHATID, "Well, I can't delete a message")
-            """
 
 
 CMD_HELP.update(
