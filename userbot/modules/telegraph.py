@@ -32,19 +32,26 @@ async def telegraphs(graph):
                 end = datetime.now()
                 ms = (end - start).seconds
                 await graph.edit(
-                    f"**Downloaded to** `{downloaded_file_name}` **in** `{ms}` **seconds.**"
+                    "**Downloaded to** `{}` **in** `{}` **seconds.**".format(
+                        downloaded_file_name, ms
+                    )
                 )
                 if downloaded_file_name.endswith(".webp"):
                     resize_image(downloaded_file_name)
                 try:
+                    start = datetime.now()
                     media_urls = upload_file(downloaded_file_name)
                 except exceptions.TelegraphException as exc:
                     await graph.edit("**Error:** " + str(exc))
                     os.remove(downloaded_file_name)
                 else:
+                    end = datetime.now()
+                    ms_two = (end - start).seconds
                     os.remove(downloaded_file_name)
                     await graph.edit(
-                        f"**Successfully uploaded to** [telegra.ph](https://telegra.ph{media_urls[0]})**.**",
+                        "**Successfully uploaded to** [telegra.ph](https://telegra.ph{})**.**".format(
+                            media_urls[0], (ms + ms_two)
+                        ),
                         link_preview=True,
                     )
             elif input_str == "text":
@@ -68,8 +75,12 @@ async def telegraphs(graph):
                 response = telegraph.create_page(
                     title_of_page, html_content=page_content
                 )
+                end = datetime.now()
+                ms = (end - start).seconds
                 await graph.edit(
-                    f'**Successfully uploaded to** [telegra.ph](https://telegra.ph/{response["path"]})**.**',
+                    "**Successfully uploaded to** [telegra.ph](https://telegra.ph/{})**.**".format(
+                        response["path"], ms
+                    ),
                     link_preview=True,
                 )
         else:
