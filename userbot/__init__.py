@@ -162,6 +162,9 @@ GENIUS = os.environ.get("GENIUS_ACCESS_TOKEN") or None
 # Uptobox
 USR_TOKEN = os.environ.get("USR_TOKEN_UPTOBOX") or None
 
+# KensurBot version
+KENSURBOTMOD_VERSION = "1.1"
+
 # 'bot' variable
 if STRING_SESSION:
     # pylint: disable=invalid-name
@@ -218,7 +221,7 @@ async def send_alive_status():
     if BOTLOG_CHATID and LOGSPAMMER:
         DEFAULTUSER = ALIVE_NAME or "Set `ALIVE_NAME` ConfigVar!"
         message = (
-            "**KensurBot v1.1 is up and running!**\n\n"
+            f"**KensurBotMod v{KENSURBOTMOD_VERSION} is up and running!**\n\n"
             f"**Telethon:** {version.__version__}\n"
             f"**Python:** {python_version()}\n"
             f"**User:** {DEFAULTUSER}"

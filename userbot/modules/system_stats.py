@@ -13,7 +13,7 @@ from shutil import which
 
 from telethon import version
 
-from userbot import ALIVE_NAME, CMD_HELP
+from userbot import ALIVE_NAME, CMD_HELP, KENSURBOTMOD_VERSION
 from userbot.events import register
 
 # ================= CONSTANT =================
@@ -44,7 +44,7 @@ async def sysdetails(sysd):
 async def amireallyalive(alive):
     """ For .alive command, check if the bot is running.  """
     await alive.edit(
-        "**KensurBotMod v1.1 is up and running!**\n\n"
+        f"**KensurBotMod v{KENSURBOTMOD_VERSION} is up and running!**\n\n"
         f"**Telethon:** {version.__version__}\n"
         f"**Python:** {python_version()}\n"
         f"**User:** {DEFAULTUSER}"
