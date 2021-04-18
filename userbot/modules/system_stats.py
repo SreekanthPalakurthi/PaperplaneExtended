@@ -23,7 +23,7 @@ DEFAULTUSER = ALIVE_NAME or "Set `ALIVE_NAME` ConfigVar!"
 
 @register(outgoing=True, pattern=r"^\.sysd$")
 async def sysdetails(sysd):
-    """ For .sysd command, get system info using neofetch. """
+    """For .sysd command, get system info using neofetch."""
     if not sysd.text[0].isalpha() and sysd.text[0] not in ("/", "#", "@", "!"):
         try:
             fetch = await asyncrunapp(
@@ -42,7 +42,7 @@ async def sysdetails(sysd):
 
 @register(outgoing=True, pattern=r"^\.alive$")
 async def amireallyalive(alive):
-    """ For .alive command, check if the bot is running.  """
+    """For .alive command, check if the bot is running."""
     await alive.edit(
         f"**KensurBotMod v{KENSURBOTMOD_VERSION} is up and running!**\n\n"
         f"**Telethon:** {version.__version__}\n"
@@ -53,7 +53,7 @@ async def amireallyalive(alive):
 
 @register(outgoing=True, pattern=r"^\.aliveu")
 async def amireallyaliveuser(username):
-    """ For .aliveu command, change the username in the .alive command. """
+    """For .aliveu command, change the username in the .alive command."""
     message = username.text
     if message != ".aliveu" and message[7:8] == " ":
         newuser = message[8:]
@@ -64,7 +64,7 @@ async def amireallyaliveuser(username):
 
 @register(outgoing=True, pattern=r"^\.resetalive$")
 async def amireallyalivereset(ureset):
-    """ For .resetalive command, reset the username in the .alive command. """
+    """For .resetalive command, reset the username in the .alive command."""
     global DEFAULTUSER
     DEFAULTUSER = str(ALIVE_NAME) if ALIVE_NAME else uname().node
     await ureset.edit("**Successfully reset user for alive!**")
